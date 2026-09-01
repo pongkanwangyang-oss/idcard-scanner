@@ -1,184 +1,190 @@
 // =====================================================
 // Google Apps Script — Code.gs
-// สร้าง Google Slides + stamp ลายเซ็น + export PDF
+// Template Slides → แทนที่ placeholder → Export PDF
 // =====================================================
 
-// ---- CONFIG: เปลี่ยน PARENT_FOLDER_ID เป็น ID ของโฟลเดอร์หลักใน Drive ----
-// วิธีหา ID: เปิดโฟลเดอร์ใน Drive แล้วดูใน URL: .../folders/<ID>
-var PARENT_FOLDER_ID = "YOUR_GOOGLE_DRIVE_FOLDER_ID_HERE";
+var TEMPLATE_SLIDE_ID = "1MIxME7lcsKCgsTSdSA4mvNFtmzNpfuou3Qu57s6LBLM";
+var PARENT_FOLDER_ID  = "1A6QTPkC_62MR4ZCyrZX5DrRW-ubdweMs";
 
 // -------------------------------------------------------
-// รับ POST request จาก Web App
+// POST handler — รับข้อมูลจาก Web App
 // -------------------------------------------------------
 function doPost(e) {
   try {
-    var data = JSON.parse(e.postData.contents);
+    var data      = JSON.parse(e.postData.contents);
+    var photoB64  = data.photo;         // รูปบัตรประชาชน
+    var petitions = data.petitions || []; // array สูงสุด 4 รูป
+    var sigB64    = data.signature;     // ลายเซ็น
+    var timestamp = data.timestamp || new Date().toISOString();
 
-    var photoBase64 = data.photo;      // data:image/jpeg;base64,...
-    var sigBase64   = data.signature;  // data:image/png;base64,...
-    var timestamp   = data.timestamp || new Date().toISOString();
-
-    // สร้างโฟลเดอร์ใหม่
-    var folderName = "ID_" + formatTimestamp(timestamp);
+    // --- สร้างโฟลเดอร์ใหม่ ชื่อ วันที่_เวลา ---
+    var folderName   = formatFolderName(timestamp);
     var parentFolder = DriveApp.getFolderById(PARENT_FOLDER_ID);
     var newFolder    = parentFolder.createFolder(folderName);
 
-    // บันทึกไฟล์รูปบัตรและลายเซ็นลง Drive (ชั่วคราว)
-    var photoBlob = dataURLtoBlob(photoBase64, "photo.jpg");
-    var sigBlob   = dataURLtoBlob(sigBase64,   "signature.png");
+    // --- Copy template Slides ไปยังโฟลเดอร์ใหม่ ---
+    var templateFile = DriveApp.getFileById(TEMPLATE_SLIDE_ID);
+    var copyFile     = templateFile.makeCopy(folderName, newFolder);
+    var pres         = SlidesApp.openById(copyFile.getId());
 
-    var photoFile = newFolder.createFile(photoBlob);
-    var sigFile   = newFolder.createFile(sigBlob);
+    // --- แปลง base64 → Blob → อัปโหลดเป็น image ใน Drive ---
+    var idBlob  = base64ToBlob(photoB64,  "idcard.jpg");
+    var sigBlob = base64ToBlob(sigB64,    "signature.png");
 
-    // สร้าง Google Slides
-    var slideResult = createSlideWithSignature(
-      newFolder,
-      photoFile,
-      sigFile,
-      folderName
-    );
+    var idFile  = newFolder.createFile(idBlob);
 
-    // Export PDF จาก Slides
-    var pdfFile = exportSlideToPDF(slideResult.slideId, folderName, newFolder);
+    // สร้างไฟล์ลายเซ็น 2 ก๊อป เพราะต้องใส่ใน 2 slide แยกกัน
+    // (Drive API ไม่อนุญาตให้ใช้ไฟล์เดียวแทรกในหลายตำแหน่ง)
+    var sigFile1 = newFolder.createFile(base64ToBlob(sigB64, "signature_1.png"));
+    var sigFile2 = newFolder.createFile(base64ToBlob(sigB64, "signature_2.png"));
 
-    // ลบไฟล์ภาพชั่วคราว (optional)
-    photoFile.setTrashed(true);
-    sigFile.setTrashed(true);
+    // petition files (สูงสุด 4, แต่ใส่ใน placeholder แค่ 1-2)
+    var petitionFiles = [];
+    for (var i = 0; i < petitions.length && i < 4; i++) {
+      var pBlob = base64ToBlob(petitions[i], "attachment_" + (i+1) + ".jpg");
+      petitionFiles.push(newFolder.createFile(pBlob));
+    }
 
-    return buildResponse({
-      success: true,
-      folderId:  newFolder.getId(),
+    // --- แทนที่ placeholder ด้วยรูปภาพ ---
+    replaceImagePlaceholder(pres, "<<IDCard>>",       idFile,    false);
+    replaceImagePlaceholder(pres, "<<Signature>>",    sigFile1,  false); // slide แรกที่เจอ
+    replaceImagePlaceholder(pres, "<<Signature>>",    sigFile2,  false); // slide ต่อไปที่ยังเหลือ
+
+    if (petitionFiles.length > 0) {
+      replaceImagePlaceholder(pres, "<<Attachment_1>>", petitionFiles[0], false);
+    }
+    if (petitionFiles.length > 1) {
+      replaceImagePlaceholder(pres, "<<Attachment_2>>", petitionFiles[1], false);
+    }
+    // ถ้า placeholder ยังเหลือ (กรณีไม่มีรูป) ให้ลบ text นั้นทิ้ง
+    clearRemainingPlaceholders(pres, ["<<Attachment_1>>","<<Attachment_2>>"]);
+
+    // บันทึก Slides
+    pres.saveAndClose();
+
+    // --- Export PDF ---
+    var pdfBlob = exportToPDF(copyFile.getId(), folderName);
+    var pdfFile = newFolder.createFile(pdfBlob);
+
+    // --- คงไฟล์ทั้งหมดไว้ในโฟลเดอร์ ไม่ลบ ---
+    // (idFile, sigFile1, sigFile2, petitionFiles ทั้งหมด คงอยู่)
+
+    return jsonResponse({
+      success:   true,
       folderUrl: newFolder.getUrl(),
-      slideUrl:  slideResult.slideUrl,
+      slideUrl:  copyFile.getUrl(),
       pdfUrl:    pdfFile.getUrl()
     });
 
   } catch (err) {
-    return buildResponse({ success: false, error: err.message });
+    return jsonResponse({ success: false, error: err.message + "\n" + err.stack });
   }
 }
 
 // -------------------------------------------------------
-// สร้าง Google Slides และวาง stamp ลายเซ็น
+// แทนที่ placeholder text ด้วยรูปภาพ
+// replaceAll = true  → แทนที่ทุก slide ที่พบ
+// replaceAll = false → แทนที่แค่ slide แรกที่พบแล้วหยุด (default)
 // -------------------------------------------------------
-function createSlideWithSignature(folder, photoFile, sigFile, title) {
-  // สร้าง Presentation ใหม่
-  var presentation = SlidesApp.create(title);
-  var pres         = presentation;
-  var slide        = pres.getSlides()[0];
+function replaceImagePlaceholder(pres, placeholder, imageFile, replaceAll) {
+  var slides  = pres.getSlides();
+  var imageId = imageFile.getId();
 
-  // ขนาด slide (px ที่ Google Slides ใช้ภายใน = EMU / 914400 inch * 96 dpi)
-  // default size: 25.4cm x 19.05cm
-  var slideW = pres.getPageWidth();   // points
-  var slideH = pres.getPageHeight();  // points
+  for (var s = 0; s < slides.length; s++) {
+    var slide    = slides[s];
+    var elements = slide.getPageElements();
+    var replaced = false;
 
-  // ตั้งพื้นหลังสีขาว
-  slide.getBackground().setSolidFill('#ffffff');
+    for (var i = elements.length - 1; i >= 0; i--) {
+      var el = elements[i];
+      if (el.getPageElementType() !== SlidesApp.PageElementType.SHAPE) continue;
 
-  // --- วางรูปบัตรประชาชน (ตรงกลาง บนครึ่ง) ---
-  var photoId  = photoFile.getId();
-  var photoImg = slide.insertImage(DriveApp.getFileById(photoId));
+      var text = el.asShape().getText().asString().trim();
+      if (text !== placeholder) continue;
 
-  var photoW = slideW * 0.75;
-  var photoH = photoW * 0.63; // อัตราส่วนบัตร ID (85.6mm x 53.98mm ≈ 0.63)
-  photoImg.setWidth(photoW);
-  photoImg.setHeight(photoH);
-  photoImg.setLeft((slideW - photoW) / 2);
-  photoImg.setTop(slideH * 0.06);
+      var left   = el.getLeft();
+      var top    = el.getTop();
+      var width  = el.getWidth();
+      var height = el.getHeight();
 
-  // --- วางลายเซ็น (stamp) ล่างขวา ---
-  var sigId  = sigFile.getId();
-  var sigImg = slide.insertImage(DriveApp.getFileById(sigId));
+      var img = slide.insertImage(DriveApp.getFileById(imageId));
+      img.setLeft(left).setTop(top).setWidth(width).setHeight(height);
+      el.remove();
+      replaced = true;
+    }
 
-  var sigW = slideW * 0.32;
-  var sigH = sigW * 0.35;
-  sigImg.setWidth(sigW);
-  sigImg.setHeight(sigH);
-  sigImg.setLeft(slideW - sigW - slideW * 0.04);
-  sigImg.setTop(slideH - sigH - slideH * 0.06);
-
-  // --- เพิ่มข้อความวันที่ ---
-  var dateStr = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "dd/MM/yyyy HH:mm");
-  var textBox = slide.insertTextBox(
-    "วันที่: " + dateStr,
-    slideW * 0.04,
-    slideH - 30,
-    200,
-    24
-  );
-  textBox.getText().getTextStyle().setFontSize(9).setForegroundColor('#546e7a');
-
-  // ย้าย Presentation ไปยัง folder ที่สร้างใหม่
-  var presFile = DriveApp.getFileById(presentation.getId());
-  folder.addFile(presFile);
-  DriveApp.getRootFolder().removeFile(presFile);
-
-  return {
-    slideId:  presentation.getId(),
-    slideUrl: presentation.getUrl()
-  };
+    // ถ้าไม่ replaceAll และ slide นี้มีการแทนที่แล้ว → หยุด
+    if (replaced && !replaceAll) return true;
+  }
+  return false;
 }
 
 // -------------------------------------------------------
-// Export Google Slides เป็น PDF แล้วบันทึกใน folder
+// ลบ placeholder ที่ยังเหลือ (กรณีไม่มีรูป)
 // -------------------------------------------------------
-function exportSlideToPDF(slideId, fileName, folder) {
+function clearRemainingPlaceholders(pres, placeholders) {
+  var slides = pres.getSlides();
+  for (var s = 0; s < slides.length; s++) {
+    var elements = slides[s].getPageElements();
+    for (var i = 0; i < elements.length; i++) {
+      var el = elements[i];
+      if (el.getPageElementType() === SlidesApp.PageElementType.SHAPE) {
+        var text = el.asShape().getText().asString().trim();
+        for (var p = 0; p < placeholders.length; p++) {
+          if (text === placeholders[p]) {
+            el.asShape().getText().setText("");
+            break;
+          }
+        }
+      }
+    }
+  }
+}
+
+// -------------------------------------------------------
+// Export Slides → PDF blob
+// -------------------------------------------------------
+function exportToPDF(slideId, filename) {
   var url     = "https://docs.google.com/presentation/d/" + slideId + "/export/pdf";
   var token   = ScriptApp.getOAuthToken();
-  var options = {
+  var res     = UrlFetchApp.fetch(url, {
     headers: { Authorization: "Bearer " + token },
     muteHttpExceptions: true
-  };
-
-  var response = UrlFetchApp.fetch(url, options);
-  var pdfBlob  = response.getBlob().setName(fileName + ".pdf");
-  var pdfFile  = folder.createFile(pdfBlob);
-
-  return pdfFile;
+  });
+  return res.getBlob().setName(filename + ".pdf");
 }
 
 // -------------------------------------------------------
-// แปลง data URL เป็น Blob
+// base64 data URL → Blob
 // -------------------------------------------------------
-function dataURLtoBlob(dataURL, filename) {
-  var parts    = dataURL.split(',');
+function base64ToBlob(dataURL, filename) {
+  var parts    = dataURL.split(",");
   var mimeType = parts[0].match(/:(.*?);/)[1];
-  var b64      = parts[1];
-  var decoded  = Utilities.base64Decode(b64);
+  var decoded  = Utilities.base64Decode(parts[1]);
   return Utilities.newBlob(decoded, mimeType, filename);
 }
 
 // -------------------------------------------------------
-// Format timestamp เป็น string สำหรับชื่อโฟลเดอร์
+// สร้างชื่อโฟลเดอร์จาก timestamp → "DD-MM-YYYY_HH-MM"
 // -------------------------------------------------------
-function formatTimestamp(isoString) {
-  try {
-    var d = new Date(isoString);
-    var pad = function(n) { return n < 10 ? '0' + n : '' + n; };
-    return d.getFullYear()
-      + pad(d.getMonth() + 1)
-      + pad(d.getDate())
-      + "_"
-      + pad(d.getHours())
-      + pad(d.getMinutes())
-      + pad(d.getSeconds());
-  } catch(e) {
-    return new Date().getTime().toString();
-  }
+function formatFolderName(isoString) {
+  var d   = new Date(isoString);
+  var tz  = Session.getScriptTimeZone();
+  return Utilities.formatDate(d, tz, "dd-MM-yyyy_HH-mm");
 }
 
 // -------------------------------------------------------
-// สร้าง JSON Response
+// JSON response helper
 // -------------------------------------------------------
-function buildResponse(obj) {
+function jsonResponse(obj) {
   return ContentService
     .createTextOutput(JSON.stringify(obj))
     .setMimeType(ContentService.MimeType.JSON);
 }
 
 // -------------------------------------------------------
-// GET handler (ทดสอบว่า deploy แล้วทำงาน)
+// GET — ทดสอบว่า deploy แล้วทำงาน
 // -------------------------------------------------------
 function doGet(e) {
-  return buildResponse({ status: "OK", message: "ID Card Web App Script is running" });
+  return jsonResponse({ status: "OK", message: "Script is running" });
 }
