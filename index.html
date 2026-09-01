@@ -1,0 +1,913 @@
+﻿<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>สแกนบัตรประชาชน</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --accent:    #4a7cf6;
+      --accent2:   #22c894;
+      --accent3:   #9b7bf4;
+      --danger:    #f05c5c;
+      --text:      #1e2340;
+      --sub:       #6b7280;
+      --radius:    18px;
+      --radius-sm: 12px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Sarabun', 'Segoe UI', sans-serif;
+      min-height: 100vh;
+      background: linear-gradient(160deg, #e8eeff 0%, #f0fdf8 50%, #f5f0ff 100%);
+      display: flex; justify-content: center; align-items: flex-start;
+      padding: 28px 16px 64px;
+    }
+
+    .page-wrap { width:100%; max-width:460px; display:flex; flex-direction:column; gap:14px; }
+
+    /* HEADER */
+    .header-card {
+      background: linear-gradient(135deg, #dce9ff 0%, #d4f7ed 100%);
+      border-radius: var(--radius); padding: 26px 24px 22px; text-align: center;
+      box-shadow: 0 2px 16px rgba(74,124,246,0.12); border: 1px solid rgba(74,124,246,0.15);
+    }
+    .header-icon {
+      display:inline-flex; align-items:center; justify-content:center;
+      width:54px; height:54px; background:rgba(255,255,255,0.7);
+      border-radius:16px; margin-bottom:12px; box-shadow:0 2px 10px rgba(74,124,246,0.15);
+    }
+    h1 { font-size:1.2rem; font-weight:700; color:var(--text); }
+    .subtitle { font-size:0.8rem; color:var(--sub); margin-top:4px; }
+
+    /* STEP BAR */
+    .stepbar-card {
+      background:#fff; border:1px solid #e8eaf2; border-radius:var(--radius);
+      padding:16px 20px; box-shadow:0 1px 8px rgba(0,0,0,0.05);
+    }
+    .stepbar { display:flex; align-items:center; }
+    .step-item { display:flex; flex-direction:column; align-items:center; gap:5px; flex:1; }
+    .step-circle {
+      width:30px; height:30px; border-radius:50%;
+      background:#eef0f6; color:#a0a8bc; font-size:0.78rem; font-weight:700;
+      display:flex; align-items:center; justify-content:center;
+      transition:background 0.3s,color 0.3s,box-shadow 0.3s;
+    }
+    .step-circle.active { background:linear-gradient(135deg,var(--accent),var(--accent2)); color:#fff; box-shadow:0 3px 10px rgba(74,124,246,0.35); }
+    .step-circle.done   { background:var(--accent2); color:#fff; box-shadow:0 2px 8px rgba(34,200,148,0.3); }
+    .step-label { font-size:0.66rem; color:#a0a8bc; font-weight:500; text-align:center; }
+    .step-label.active { color:var(--accent); font-weight:700; }
+    .step-label.done   { color:var(--accent2); font-weight:600; }
+    .step-line { flex:0.6; height:2px; background:#e8eaf2; margin-bottom:18px; border-radius:2px; transition:background 0.3s; }
+    .step-line.active { background:linear-gradient(90deg,var(--accent),var(--accent2)); }
+
+    /* SECTION CARDS */
+    .section-card { border-radius:var(--radius); padding:20px; box-shadow:0 2px 14px rgba(0,0,0,0.06); border:1px solid transparent; }
+    .card-id       { background:linear-gradient(140deg,#eef3ff 0%,#e4edff 100%); border-color:#c8d8ff; }
+    .card-petition { background:linear-gradient(140deg,#eafaf4 0%,#d9f5ec 100%); border-color:#b6e9d8; }
+    .card-sig      { background:linear-gradient(140deg,#f2eeff 0%,#ebe3ff 100%); border-color:#d4c4fb; }
+
+    /* SECTION LABEL */
+    .section-label { font-size:0.95rem; font-weight:700; letter-spacing:0.8px; text-transform:none; margin-bottom:14px; display:flex; align-items:center; gap:8px; }
+    .lbl-dot { width:7px; height:7px; border-radius:50%; flex-shrink:0; }
+    .card-id       .section-label { color:#3a60c8; }
+    .card-id       .lbl-dot       { background:var(--accent); }
+    .card-petition .section-label { color:#1a8c63; }
+    .card-petition .lbl-dot       { background:var(--accent2); }
+    .card-sig      .section-label { color:#6b48d4; }
+    .card-sig      .lbl-dot       { background:var(--accent3); }
+
+    /* UPLOAD AREA */
+    .upload-area {
+      border:2px dashed rgba(0,0,0,0.12); border-radius:var(--radius-sm);
+      padding:22px 16px; text-align:center; cursor:pointer;
+      transition:border-color 0.2s,background 0.2s,transform 0.12s;
+      background:rgba(255,255,255,0.55);
+    }
+    .upload-area:hover  { border-color:var(--accent); background:rgba(255,255,255,0.85); }
+    .upload-area:active { transform:scale(0.985); }
+    .upload-icon-wrap { display:inline-flex; align-items:center; justify-content:center; width:46px; height:46px; border-radius:13px; margin-bottom:10px; }
+    .card-id       .upload-icon-wrap { background:rgba(74,124,246,0.12); }
+    .card-petition .upload-icon-wrap { background:rgba(34,200,148,0.12); }
+    .upload-area h3 { font-size:0.9rem; font-weight:600; color:var(--text); margin-bottom:4px; }
+    .upload-area p  { font-size:0.77rem; color:var(--sub); }
+
+    /* ID PREVIEW */
+    .preview-single { display:none; border-radius:var(--radius-sm); overflow:hidden; border:1px solid rgba(0,0,0,0.08); }
+    .preview-single img { width:100%; max-height:180px; object-fit:contain; display:block; padding:8px; background:#f8f9ff; }
+    .preview-footer { display:flex; align-items:center; justify-content:space-between; padding:8px 14px; background:#fff; border-top:1px solid rgba(0,0,0,0.06); }
+    .preview-badge { display:inline-flex; align-items:center; gap:5px; font-size:0.77rem; font-weight:600; color:var(--accent2); }
+    .retake-btn { font-size:0.77rem; font-weight:600; color:var(--accent); cursor:pointer; background:none; border:none; padding:4px 0; display:flex; align-items:center; gap:4px; font-family:inherit; }
+
+    /* PETITION */
+    .petition-top-row { display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; }
+    .petition-count-badge { font-size:0.72rem; font-weight:700; padding:3px 10px; border-radius:20px; background:rgba(34,200,148,0.12); color:#1a8c63; border:1px solid rgba(34,200,148,0.3); }
+    .petition-legend { display:flex; gap:14px; margin-bottom:12px; }
+    .petition-info { display:flex; align-items:center; gap:5px; font-size:0.72rem; color:var(--sub); font-weight:500; }
+    .info-dot { width:7px; height:7px; border-radius:50%; flex-shrink:0; }
+    .info-dot.blue  { background:var(--accent); }
+    .info-dot.green { background:var(--accent2); }
+    .petition-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+    .petition-thumb { position:relative; border-radius:10px; overflow:hidden; border:1px solid rgba(0,0,0,0.08); aspect-ratio:4/3; background:#e8f8f2; }
+    .petition-thumb img { width:100%; height:100%; object-fit:cover; display:block; }
+    .thumb-badge { position:absolute; bottom:0; left:0; right:0; padding:4px 6px; font-size:0.64rem; font-weight:700; text-align:center; }
+    .thumb-badge.stamp  { background:rgba(74,124,246,0.85); color:#fff; }
+    .thumb-badge.folder { background:rgba(34,200,148,0.85); color:#fff; }
+    .thumb-remove { position:absolute; top:5px; right:5px; width:22px; height:22px; border-radius:50%; background:rgba(0,0,0,0.32); border:none; color:#fff; font-size:0.75rem; cursor:pointer; display:flex; align-items:center; justify-content:center; }
+    .thumb-remove:hover { background:rgba(240,92,92,0.85); }
+    .petition-add { aspect-ratio:4/3; border:2px dashed rgba(0,0,0,0.12); border-radius:10px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px; cursor:pointer; background:rgba(255,255,255,0.5); transition:border-color 0.2s,background 0.2s; font-size:0.74rem; color:var(--sub); font-weight:600; font-family:inherit; }
+    .petition-add:hover { border-color:var(--accent2); background:rgba(34,200,148,0.08); color:var(--accent2); }
+
+    /* SIGNATURE */
+    .sig-toolbar { display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; }
+    .sig-wrapper { position:relative; border:1.5px solid #d4c4fb; border-radius:var(--radius-sm); overflow:hidden; background:#fff; touch-action:none; transition:border-color 0.2s,box-shadow 0.2s; }
+    .sig-wrapper.drawing { border-color:var(--accent3); box-shadow:0 0 0 3px rgba(155,123,244,0.15); }
+    #sigCanvas { display:block; width:100%; cursor:crosshair; }
+    .sig-placeholder { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); color:#c4b0ff; font-size:0.88rem; pointer-events:none; transition:opacity 0.2s; display:flex; flex-direction:column; align-items:center; gap:6px; }
+    .clear-btn { display:inline-flex; align-items:center; gap:5px; background:rgba(155,123,244,0.1); border:1px solid #d4c4fb; border-radius:8px; padding:5px 12px; font-size:0.78rem; color:#6b48d4; cursor:pointer; font-family:inherit; transition:all 0.2s; }
+    .clear-btn:hover { border-color:var(--danger); color:var(--danger); background:rgba(240,92,92,0.08); }
+
+    /* ACTION */
+    .action-card { background:#fff; border:1px solid #e8eaf2; border-radius:var(--radius); padding:16px; box-shadow:0 2px 12px rgba(0,0,0,0.05); }
+    .action-row { display:flex; gap:10px; }
+    .btn { flex:1; padding:14px; border-radius:var(--radius-sm); font-size:0.95rem; font-weight:700; border:none; cursor:pointer; font-family:inherit; transition:transform 0.1s,box-shadow 0.2s; letter-spacing:0.2px; }
+    .btn:active { transform:scale(0.97); }
+    .btn-cancel { background:#f3f4f8; color:var(--sub); border:1px solid #e2e4ee; }
+    .btn-cancel:hover { background:#e8eaf2; }
+    .btn-submit { background:linear-gradient(135deg,var(--accent),var(--accent3)); color:#fff; box-shadow:0 4px 16px rgba(74,124,246,0.3); }
+    .btn-submit:hover    { box-shadow:0 6px 20px rgba(74,124,246,0.4); }
+    .btn-submit:disabled { background:#e2e4ee; color:#a0a8bc; box-shadow:none; cursor:not-allowed; }
+
+    /* BOTTOM SHEET */
+    #sheetOverlay { display:none; position:fixed; inset:0; background:rgba(20,24,50,0.4); z-index:800; opacity:0; transition:opacity 0.25s; backdrop-filter:blur(3px); }
+    #sheetOverlay.show { display:block; }
+    #sheetOverlay.visible { opacity:1; }
+    #bottomSheet { position:fixed; bottom:0; left:0; right:0; background:#fff; border-radius:24px 24px 0 0; padding:10px 0 36px; z-index:801; transform:translateY(100%); transition:transform 0.32s cubic-bezier(0.32,0.72,0,1); max-width:480px; margin:0 auto; border-top:1px solid #e8eaf2; box-shadow:0 -4px 24px rgba(0,0,0,0.1); }
+    #bottomSheet.open { transform:translateY(0); }
+    .sheet-handle { width:36px; height:4px; background:#e2e4ee; border-radius:2px; margin:8px auto 18px; }
+    .sheet-title  { text-align:center; font-size:0.72rem; font-weight:700; color:var(--sub); letter-spacing:0.8px; text-transform:uppercase; margin-bottom:10px; }
+    .sheet-item   { display:flex; align-items:center; gap:16px; padding:14px 24px; cursor:pointer; transition:background 0.15s; font-size:0.95rem; color:var(--text); font-weight:500; }
+    .sheet-item:hover, .sheet-item:active { background:#f5f6fb; }
+    .sheet-icon   { width:42px; height:42px; border-radius:12px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+    .sheet-icon.cam { background:#e8f0ff; }
+    .sheet-icon.gal { background:#e0f8f0; }
+    .sheet-item-info { display:flex; flex-direction:column; gap:3px; }
+    .sheet-item-sub  { font-size:0.75rem; color:var(--sub); font-weight:400; }
+    .sheet-divider   { height:1px; background:#f0f1f5; margin:4px 20px; }
+    .sheet-cancel { margin:10px 16px 0; padding:13px; border-radius:var(--radius-sm); background:#fff5f5; border:1px solid #fcd0d0; text-align:center; font-size:0.9rem; font-weight:600; color:#e05050; cursor:pointer; font-family:inherit; width:calc(100% - 32px); transition:background 0.15s; }
+    .sheet-cancel:hover { background:#ffe8e8; }
+
+    /* CAMERA */
+    #cameraModal { display:none; position:fixed; inset:0; background:#06080f; z-index:900; flex-direction:column; align-items:center; justify-content:center; }
+    #cameraModal.show { display:flex; }
+    #cameraVideo { width:100%; max-width:480px; max-height:58vh; object-fit:cover; }
+    .camera-dim  { position:absolute; inset:0; background:rgba(0,0,0,0.35); pointer-events:none; }
+    .camera-guide { position:absolute; top:50%; left:50%; transform:translate(-50%,-58%); width:84%; max-width:360px; aspect-ratio:85.6/54; border-radius:10px; pointer-events:none; }
+    .cg-tl,.cg-tr,.cg-bl,.cg-br { position:absolute; width:22px; height:22px; }
+    .cg-tl { top:-2px;left:-2px;   border-top:3px solid #fff;border-left:3px solid #fff;border-radius:4px 0 0 0; }
+    .cg-tr { top:-2px;right:-2px;  border-top:3px solid #fff;border-right:3px solid #fff;border-radius:0 4px 0 0; }
+    .cg-bl { bottom:-2px;left:-2px; border-bottom:3px solid #fff;border-left:3px solid #fff;border-radius:0 0 0 4px; }
+    .cg-br { bottom:-2px;right:-2px;border-bottom:3px solid #fff;border-right:3px solid #fff;border-radius:0 0 4px 0; }
+    .camera-hint { color:rgba(255,255,255,0.75); font-size:0.78rem; margin-top:14px; text-align:center; font-family:inherit; }
+    .camera-controls { display:flex; align-items:center; justify-content:space-around; width:100%; max-width:480px; padding:20px 40px 10px; }
+    .cam-side-btn { width:46px; height:46px; border-radius:50%; background:rgba(255,255,255,0.12); border:1.5px solid rgba(255,255,255,0.2); color:#fff; font-size:1.2rem; cursor:pointer; display:flex; align-items:center; justify-content:center; backdrop-filter:blur(4px); transition:background 0.15s; }
+    .cam-side-btn:hover { background:rgba(255,255,255,0.22); }
+    .cam-btn-shoot { width:72px; height:72px; border-radius:50%; background:#fff; border:4px solid rgba(255,255,255,0.3); box-shadow:0 0 0 6px rgba(255,255,255,0.1); cursor:pointer; transition:transform 0.1s; position:relative; }
+    .cam-btn-shoot:active { transform:scale(0.91); }
+    .cam-btn-shoot::after { content:''; display:block; width:56px; height:56px; border-radius:50%; background:linear-gradient(135deg,var(--accent),var(--accent2)); position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); }
+    #permError { display:none; flex-direction:column; align-items:center; gap:14px; padding:40px 32px; text-align:center; }
+    #permError.show { display:flex; }
+    .perm-icon { width:64px; height:64px; background:rgba(240,92,92,0.12); border-radius:50%; display:flex; align-items:center; justify-content:center; }
+    #permError h3 { color:#fff; }
+    #permError p  { color:rgba(255,255,255,0.65); font-size:0.85rem; line-height:1.7; }
+    .perm-btn { padding:12px 28px; border-radius:var(--radius-sm); font-size:0.9rem; font-weight:700; border:none; cursor:pointer; font-family:inherit; }
+    .perm-btn-primary { background:linear-gradient(135deg,var(--accent),var(--accent2)); color:#fff; }
+    .perm-btn-ghost   { background:rgba(255,255,255,0.1); color:rgba(255,255,255,0.7); }
+
+    /* LOADING */
+    #loadingOverlay { display:none; position:fixed; inset:0; background:rgba(240,243,255,0.88); z-index:999; flex-direction:column; align-items:center; justify-content:center; gap:16px; backdrop-filter:blur(6px); }
+    #loadingOverlay.show { display:flex; }
+    .spinner { width:44px; height:44px; border:4px solid #e0e4f4; border-top-color:var(--accent); border-radius:50%; animation:spin 0.75s linear infinite; }
+    @keyframes spin { to { transform:rotate(360deg); } }
+    #loadingOverlay p { color:var(--text); font-weight:600; font-size:0.9rem; }
+
+    /* TOAST */
+    #toast { display:none; position:fixed; bottom:28px; left:50%; transform:translateX(-50%); padding:13px 22px; border-radius:12px; font-weight:600; font-size:0.9rem; color:#fff; z-index:1000; animation:fadeUp 0.3s; white-space:nowrap; box-shadow:0 6px 20px rgba(0,0,0,0.15); }
+    #toast.success { background:linear-gradient(135deg,#22c894,#18a677); }
+    #toast.error   { background:linear-gradient(135deg,#f05c5c,#c94040); }
+    @keyframes fadeUp { from{opacity:0;transform:translateX(-50%) translateY(12px);}to{opacity:1;transform:translateX(-50%) translateY(0);} }
+
+    /* ── PROGRESS MODAL ── */
+    #progressModal {
+      display: none;
+      position: fixed; inset: 0;
+      background: rgba(20,24,60,0.45);
+      z-index: 950;
+      align-items: center; justify-content: center;
+      backdrop-filter: blur(4px);
+      padding: 20px;
+    }
+    #progressModal.show { display: flex; }
+
+    .prog-card {
+      background: #fff;
+      border-radius: 22px;
+      padding: 28px 24px 24px;
+      width: 100%; max-width: 360px;
+      box-shadow: 0 12px 40px rgba(0,0,0,0.18);
+      animation: popIn 0.28s cubic-bezier(0.34,1.56,0.64,1);
+    }
+    @keyframes popIn {
+      from { opacity:0; transform:scale(0.88); }
+      to   { opacity:1; transform:scale(1); }
+    }
+
+    .prog-header { text-align: center; margin-bottom: 24px; }
+    .prog-title-icon {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 56px; height: 56px; border-radius: 50%;
+      background: linear-gradient(135deg,#eef3ff,#e4edff);
+      margin-bottom: 14px; position: relative;
+    }
+    .prog-spinner {
+      width: 28px; height: 28px;
+      border: 3px solid #c8d8ff; border-top-color: var(--accent);
+      border-radius: 50%; animation: spin 0.75s linear infinite;
+    }
+    .prog-done-icon {
+      display: none;
+      font-size: 1.6rem; color: var(--accent2); font-weight: 700;
+    }
+    #progressModal.done .prog-spinner { display: none; }
+    #progressModal.done .prog-done-icon { display: block; }
+    #progressModal.done .prog-title-icon { background: linear-gradient(135deg,#e0f9f0,#d4f5e9); }
+
+    .prog-header h2 { font-size: 1.05rem; font-weight: 700; color: var(--text); margin-bottom: 4px; }
+    .prog-header p  { font-size: 0.82rem; color: var(--sub); }
+
+    .prog-list { display: flex; flex-direction: column; gap: 0; }
+
+    .prog-item {
+      display: flex; align-items: center; gap: 13px;
+      padding: 13px 0;
+      border-bottom: 1px solid #f0f1f5;
+      transition: opacity 0.2s;
+    }
+    .prog-item:last-child { border-bottom: none; }
+    .prog-item.waiting { opacity: 0.45; }
+
+    .prog-item-icon {
+      width: 36px; height: 36px; border-radius: 10px; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .prog-item-icon.blue   { background: #eef3ff; color: var(--accent); }
+    .prog-item-icon.green  { background: #eafaf4; color: #1a8c63; }
+    .prog-item-icon.purple { background: #f2eeff; color: #6b48d4; }
+    .prog-item-icon.orange { background: #fff4e8; color: #d97706; }
+
+    .prog-item-label { flex: 1; font-size: 0.9rem; font-weight: 600; color: var(--text); }
+
+    .prog-item-status { width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+
+    /* รอ */
+    .prog-dot-wait {
+      width: 10px; height: 10px; border-radius: 50%;
+      background: #e2e4ee;
+    }
+    /* กำลังโหลด */
+    .prog-dot-spin {
+      width: 20px; height: 20px;
+      border: 2.5px solid #c8d8ff; border-top-color: var(--accent);
+      border-radius: 50%; animation: spin 0.7s linear infinite;
+    }
+    /* เสร็จ */
+    .prog-check {
+      width: 26px; height: 26px; border-radius: 50%;
+      background: linear-gradient(135deg, var(--accent2), #18a677);
+      display: flex; align-items: center; justify-content: center;
+      animation: popIn 0.25s cubic-bezier(0.34,1.56,0.64,1);
+    }
+    .prog-check svg { color: #fff; }
+
+    .prog-back-btn {
+      width: 100%; margin-top: 20px; padding: 14px;
+      border-radius: var(--radius-sm);
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      color: #fff; font-size: 0.95rem; font-weight: 700;
+      border: none; cursor: pointer; font-family: inherit;
+      box-shadow: 0 4px 14px rgba(74,124,246,0.3);
+      transition: box-shadow 0.2s, transform 0.1s;
+      animation: popIn 0.3s cubic-bezier(0.34,1.56,0.64,1);
+    }
+    .prog-back-btn:hover   { box-shadow: 0 6px 20px rgba(74,124,246,0.4); }
+    .prog-back-btn:active  { transform: scale(0.97); }
+  </style>
+</head>
+<body>
+
+<div id="loadingOverlay"><div class="spinner"></div><p id="loadingText">กำลังดำเนินการ...</p></div>
+<div id="toast"></div>
+<div id="sheetOverlay" onclick="closeSheet()"></div>
+
+<!-- UPLOAD PROGRESS MODAL -->
+<div id="progressModal">
+  <div class="prog-card">
+    <div class="prog-header">
+      <div class="prog-title-icon">
+        <div class="prog-spinner" id="progSpinner"></div>
+        <div class="prog-done-icon" id="progDoneIcon">✓</div>
+      </div>
+      <h2 id="progTitle">กำลังอัปโหลด...</h2>
+      <p id="progSubtitle">กรุณารอสักครู่</p>
+    </div>
+
+    <div class="prog-list">
+      <div class="prog-item" id="pi-id">
+        <div class="prog-item-icon blue">
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="3"/><circle cx="8" cy="12" r="2"/><path d="M13 10h5M13 14h3"/></svg>
+        </div>
+        <span class="prog-item-label">รูปบัตรประชาชน</span>
+        <div class="prog-item-status" id="ps-id">
+          <div class="prog-dot-spin"></div>
+        </div>
+      </div>
+
+      <div class="prog-item" id="pi-petition">
+        <div class="prog-item-icon green">
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+        </div>
+        <span class="prog-item-label">ภาพถ่ายแนบคำร้อง</span>
+        <div class="prog-item-status" id="ps-petition">
+          <div class="prog-dot-wait"></div>
+        </div>
+      </div>
+
+      <div class="prog-item" id="pi-sig">
+        <div class="prog-item-icon purple">
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+        </div>
+        <span class="prog-item-label">ลายเซ็น</span>
+        <div class="prog-item-status" id="ps-sig">
+          <div class="prog-dot-wait"></div>
+        </div>
+      </div>
+
+      <div class="prog-item" id="pi-pdf">
+        <div class="prog-item-icon orange">
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M9 13h6M9 17h4"/></svg>
+        </div>
+        <span class="prog-item-label">สร้าง PDF ใน Google Drive</span>
+        <div class="prog-item-status" id="ps-pdf">
+          <div class="prog-dot-wait"></div>
+        </div>
+      </div>
+    </div>
+
+    <button class="prog-back-btn" id="progBackBtn" onclick="resetForm()" style="display:none;">
+      ← กลับไปยังหน้าคำร้อง
+    </button>
+  </div>
+</div>
+
+<!-- BOTTOM SHEET -->
+<div id="bottomSheet">
+  <div class="sheet-handle"></div>
+  <div class="sheet-title" id="sheetTitle">เลือกวิธีอัปโหลดรูป</div>
+  <div class="sheet-item" onclick="sheetChoose('camera')">
+    <div class="sheet-icon cam">
+      <svg width="22" height="22" fill="none" stroke="#4f8ef7" stroke-width="2" viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+    </div>
+    <div class="sheet-item-info"><span>ถ่ายรูปด้วยกล้อง</span><span class="sheet-item-sub">ใช้กล้องของอุปกรณ์คุณ</span></div>
+  </div>
+  <div class="sheet-divider"></div>
+  <div class="sheet-item" onclick="sheetChoose('gallery')">
+    <div class="sheet-icon gal">
+      <svg width="22" height="22" fill="none" stroke="#38c9a0" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+    </div>
+    <div class="sheet-item-info"><span>เลือกจากคลังภาพ</span><span class="sheet-item-sub">รูปที่มีอยู่ในอุปกรณ์</span></div>
+  </div>
+  <button class="sheet-cancel" onclick="closeSheet()">ยกเลิก</button>
+</div>
+
+<!-- CAMERA MODAL -->
+<div id="cameraModal">
+  <div id="cameraView" style="position:relative;width:100%;max-width:480px;display:flex;flex-direction:column;align-items:center;">
+    <video id="cameraVideo" autoplay playsinline muted></video>
+    <div class="camera-dim"></div>
+    <div class="camera-guide"><div class="cg-tl"></div><div class="cg-tr"></div><div class="cg-bl"></div><div class="cg-br"></div></div>
+    <p class="camera-hint" id="cameraHint">วางบัตรประชาชนให้อยู่ในกรอบ</p>
+    <div class="camera-controls">
+      <button class="cam-side-btn" onclick="closeCamera()">✕</button>
+      <button class="cam-btn-shoot" onclick="shootPhoto()"></button>
+      <button class="cam-side-btn" onclick="flipCamera()">🔄</button>
+    </div>
+    <canvas id="captureCanvas" style="display:none;"></canvas>
+  </div>
+  <div id="permError">
+    <div class="perm-icon"><svg width="30" height="30" fill="none" stroke="#f05c5c" stroke-width="2" viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><line x1="1" y1="1" x2="23" y2="23"/></svg></div>
+    <h3>ไม่ได้รับอนุญาตใช้กล้อง</h3>
+    <p>กรุณาอนุญาตการเข้าถึงกล้องในการตั้งค่า browser แล้วลองอีกครั้ง</p>
+    <button class="perm-btn perm-btn-primary" onclick="retryCamera()">ลองอีกครั้ง</button>
+    <button class="perm-btn perm-btn-ghost"   onclick="closeCamera()">ปิด</button>
+  </div>
+</div>
+
+<!-- MAIN -->
+<div class="page-wrap">
+
+  <!-- Header Card -->
+  <div class="header-card">
+    <div class="header-icon">
+      <svg width="28" height="28" fill="none" stroke="url(#g1)" stroke-width="2" viewBox="0 0 24 24">
+        <defs><linearGradient id="g1" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#4f8ef7"/><stop offset="100%" stop-color="#38c9a0"/></linearGradient></defs>
+        <rect x="2" y="5" width="20" height="14" rx="3"/><circle cx="8" cy="12" r="2.5"/><path d="M13 10h5M13 14h3"/>
+      </svg>
+    </div>
+    <h1>สแกนบัตรประชาชน</h1>
+    <p class="subtitle">อัปโหลดรูปบัตร ภาพแนบคำร้อง และลงลายเซ็น</p>
+  </div>
+
+  <!-- Step bar card -->
+  <div class="stepbar-card">
+    <div class="stepbar">
+      <div class="step-item"><div class="step-circle active" id="s1c">1</div><span class="step-label active" id="s1l">บัตรประชาชน</span></div>
+      <div class="step-line" id="sl1"></div>
+      <div class="step-item"><div class="step-circle" id="s2c">2</div><span class="step-label" id="s2l">แนบคำร้อง</span></div>
+      <div class="step-line" id="sl2"></div>
+      <div class="step-item"><div class="step-circle" id="s3c">3</div><span class="step-label" id="s3l">ลายเซ็น</span></div>
+    </div>
+  </div>
+
+  <!-- Card 1: บัตรประชาชน -->
+  <div class="section-card card-id">
+    <div class="section-label">
+      <div class="lbl-dot"></div>
+      1. รูปบัตรประชาชน
+    </div>
+    <div class="upload-area" id="uploadArea1" onclick="openSheet('id')">
+      <div class="upload-icon-wrap">
+        <svg width="24" height="24" fill="none" stroke="#4f8ef7" stroke-width="2" viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="3"/><circle cx="8" cy="12" r="2.5"/><path d="M13 10h5M13 14h3"/></svg>
+      </div>
+      <h3>แตะเพื่ออัปโหลดรูปบัตร</h3>
+      <p>ถ่ายรูปใหม่ หรือเลือกจากคลังภาพ</p>
+    </div>
+    <div class="preview-single" id="previewWrap1">
+      <img id="previewImg1" src="" alt="รูปบัตรประชาชน" />
+      <div class="preview-footer">
+        <span class="preview-badge">
+          <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+          อัปโหลดสำเร็จ
+        </span>
+        <button class="retake-btn" onclick="retakeID()">
+          <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-4.12"/></svg>
+          เปลี่ยนรูป
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Card 2: ภาพแนบคำร้อง -->
+  <div class="section-card card-petition">
+    <div class="petition-top-row">
+      <div class="section-label" style="margin:0;">
+        <div class="lbl-dot"></div>
+        2. ภาพถ่ายแนบคำร้อง
+      </div>
+      <span class="petition-count-badge" id="petitionCount">0 / 4</span>
+    </div>
+    <div class="petition-legend">
+      <div class="petition-info"><div class="info-dot blue"></div>Stamp ในเอกสาร (2 แรก)</div>
+      <div class="petition-info"><div class="info-dot green"></div>บันทึกในโฟลเดอร์</div>
+    </div>
+    <div class="petition-grid" id="petitionGrid">
+      <button class="petition-add" id="petitionAddBtn" onclick="openSheet('petition')">
+        <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+        เพิ่มภาพ
+      </button>
+    </div>
+  </div>
+
+  <!-- Card 3: ลายเซ็น -->
+  <div class="section-card card-sig">
+    <div class="sig-toolbar">
+      <div class="section-label" style="margin:0;">
+        <div class="lbl-dot"></div>
+        3. ลายเซ็น
+      </div>
+      <button class="clear-btn" onclick="clearSignature()">
+        <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg>
+        ล้างใหม่
+      </button>
+    </div>
+    <div class="sig-wrapper" id="sigWrapper">
+      <canvas id="sigCanvas" height="180"></canvas>
+      <div class="sig-placeholder" id="sigPlaceholder">
+        <svg width="22" height="22" fill="none" stroke="#bbb" stroke-width="2" viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+        เขียนลายเซ็นที่นี่
+      </div>
+    </div>
+  </div>
+
+  <!-- Action card -->
+  <div class="action-card">
+    <div class="action-row">
+      <button class="btn btn-cancel" onclick="cancelAll()">ยกเลิก</button>
+      <button class="btn btn-submit" id="submitBtn" onclick="submitForm()" disabled>เสร็จสิ้น ✓</button>
+    </div>
+  </div>
+
+</div>
+
+<input type="file" id="galleryInput" accept="image/*" style="display:none;" />
+
+<script>
+  const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwNLAmEkI-ROUZADhqwHFVROuZs2wq3qlzJYjTspQ2Il8o0YcQHIDV7zoKYpjlyak7s/exec"; // ใส่ URL จาก Deploy ที่นี่
+  const MAX_PETITION    = 4;
+
+  // STATE
+  let photoID       = null;       // data URL รูปบัตร
+  let petitions     = [];         // array ของ data URL (สูงสุด 4)
+  let hasSig        = false;
+  let cameraStream  = null;
+  let facingMode    = 'environment';
+  let activeTarget  = null;       // 'id' | 'petition'
+
+  const galleryInput = document.getElementById('galleryInput');
+  const video        = document.getElementById('cameraVideo');
+  const capCanvas    = document.getElementById('captureCanvas');
+
+  /* =========================================================
+     BOTTOM SHEET
+  ========================================================= */
+  function openSheet(target) {
+    activeTarget = target;
+    document.getElementById('sheetTitle').textContent =
+      target === 'id' ? 'เลือกวิธีอัปโหลดรูปบัตรประชาชน'
+                      : 'เลือกวิธีอัปโหลดภาพแนบคำร้อง';
+    document.getElementById('cameraHint').textContent =
+      target === 'id' ? 'วางบัตรประชาชนให้อยู่ในกรอบ'
+                      : 'ถ่ายภาพเอกสารหรือหลักฐาน';
+    const ov = document.getElementById('sheetOverlay');
+    const sh = document.getElementById('bottomSheet');
+    ov.classList.add('show');
+    requestAnimationFrame(() => { ov.classList.add('visible'); sh.classList.add('open'); });
+  }
+  function closeSheet() {
+    const ov = document.getElementById('sheetOverlay');
+    const sh = document.getElementById('bottomSheet');
+    ov.classList.remove('visible'); sh.classList.remove('open');
+    setTimeout(() => ov.classList.remove('show'), 300);
+  }
+  function sheetChoose(method) {
+    closeSheet();
+    if (method === 'camera') setTimeout(startCamera, 340);
+    else                     setTimeout(() => galleryInput.click(), 320);
+  }
+
+  /* =========================================================
+     GALLERY
+  ========================================================= */
+  galleryInput.addEventListener('change', function () {
+    const file = this.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (e) => handlePhotoResult(activeTarget, e.target.result);
+    reader.readAsDataURL(file);
+    this.value = '';
+  });
+
+  /* =========================================================
+     CAMERA
+  ========================================================= */
+  async function startCamera() {
+    document.getElementById('cameraView').style.display = 'flex';
+    document.getElementById('permError').classList.remove('show');
+    document.getElementById('cameraModal').classList.add('show');
+    try {
+      cameraStream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode, width:{ideal:1280}, height:{ideal:720} }, audio: false
+      });
+      video.srcObject = cameraStream;
+      await video.play();
+    } catch(e) {
+      document.getElementById('cameraView').style.display = 'none';
+      document.getElementById('permError').classList.add('show');
+    }
+  }
+  function shootPhoto() {
+    if (!cameraStream) return;
+    capCanvas.width  = video.videoWidth;
+    capCanvas.height = video.videoHeight;
+    capCanvas.getContext('2d').drawImage(video, 0, 0);
+    const url = capCanvas.toDataURL('image/jpeg', 0.92);
+    closeCamera();
+    handlePhotoResult(activeTarget, url);
+  }
+  function flipCamera() { facingMode = facingMode==='environment'?'user':'environment'; stopStream(); startCamera(); }
+  function closeCamera() {
+    stopStream();
+    document.getElementById('cameraModal').classList.remove('show');
+    document.getElementById('permError').classList.remove('show');
+    document.getElementById('cameraView').style.display = 'flex';
+  }
+  function stopStream() {
+    if (cameraStream) { cameraStream.getTracks().forEach(t=>t.stop()); cameraStream=null; }
+    video.srcObject = null;
+  }
+  function retryCamera() {
+    document.getElementById('permError').classList.remove('show');
+    document.getElementById('cameraView').style.display = 'flex';
+    startCamera();
+  }
+
+  /* =========================================================
+     PHOTO HANDLERS
+  ========================================================= */
+  function handlePhotoResult(target, dataURL) {
+    if (target === 'id') {
+      setIDPhoto(dataURL);
+    } else {
+      addPetitionPhoto(dataURL);
+    }
+  }
+
+  // --- บัตรประชาชน ---
+  function setIDPhoto(dataURL) {
+    photoID = dataURL;
+    document.getElementById('previewImg1').src   = dataURL;
+    document.getElementById('previewWrap1').style.display  = 'block';
+    document.getElementById('uploadArea1').style.display   = 'none';
+    updateSteps(); checkReady();
+  }
+  function retakeID() {
+    photoID = null;
+    document.getElementById('previewWrap1').style.display  = 'none';
+    document.getElementById('uploadArea1').style.display   = 'block';
+    updateSteps(); checkReady();
+  }
+
+  // --- ภาพแนบคำร้อง (multi) ---
+  function addPetitionPhoto(dataURL) {
+    if (petitions.length >= MAX_PETITION) return;
+    petitions.push(dataURL);
+    renderPetitionGrid();
+    updateSteps(); checkReady();
+  }
+  function removePetitionPhoto(idx) {
+    petitions.splice(idx, 1);
+    renderPetitionGrid();
+    updateSteps(); checkReady();
+  }
+
+  function renderPetitionGrid() {
+    const grid    = document.getElementById('petitionGrid');
+    const addBtn  = document.getElementById('petitionAddBtn');
+    const countEl = document.getElementById('petitionCount');
+
+    // ลบ thumb เก่า (ไม่ลบ addBtn)
+    grid.querySelectorAll('.petition-thumb').forEach(el => el.remove());
+
+    petitions.forEach((url, i) => {
+      const isStamp  = i < 2;
+      const thumb    = document.createElement('div');
+      thumb.className = 'petition-thumb';
+
+      const img = document.createElement('img');
+      img.src = url; img.alt = 'ภาพแนบ ' + (i+1);
+
+      const badge = document.createElement('div');
+      badge.className = 'thumb-badge ' + (isStamp ? 'stamp' : 'folder');
+      badge.textContent = isStamp ? '📄 Stamp ในเอกสาร' : '📁 บันทึกในโฟลเดอร์';
+
+      const removeBtn = document.createElement('button');
+      removeBtn.className = 'thumb-remove';
+      removeBtn.innerHTML = '✕';
+      removeBtn.onclick = (e) => { e.stopPropagation(); removePetitionPhoto(i); };
+
+      thumb.appendChild(img);
+      thumb.appendChild(badge);
+      thumb.appendChild(removeBtn);
+
+      // แทรกก่อน addBtn
+      grid.insertBefore(thumb, addBtn);
+    });
+
+    // ซ่อน/แสดงปุ่มเพิ่ม
+    addBtn.style.display = petitions.length >= MAX_PETITION ? 'none' : 'flex';
+    countEl.textContent  = petitions.length + ' / ' + MAX_PETITION;
+    countEl.style.color  = petitions.length === MAX_PETITION ? 'var(--accent2)' : 'var(--sub)';
+  }
+
+  /* =========================================================
+     STEP UI
+  ========================================================= */
+  function updateSteps() {
+    const s1 = !!photoID;
+    const s2 = petitions.length > 0;
+    const s3 = hasSig;
+    setStep(1, s1 ? (s2 ? 'done' : 'done') : 'active');
+    setStep(2, s2 ? (s3 ? 'done' : 'active') : (s1 ? 'active' : ''));
+    setStep(3, s3 ? 'done' : (s1 && s2 ? 'active' : ''));
+    document.getElementById('sl1').classList.toggle('active', s1);
+    document.getElementById('sl2').classList.toggle('active', s2);
+  }
+  function setStep(n, state) {
+    const c = document.getElementById('s'+n+'c');
+    const l = document.getElementById('s'+n+'l');
+    c.className   = 'step-circle' + (state ? ' '+state : '');
+    l.className   = 'step-label'  + (state ? ' '+state : '');
+    c.textContent = state === 'done' ? '✓' : String(n);
+  }
+
+  /* =========================================================
+     SIGNATURE
+  ========================================================= */
+  const canvas      = document.getElementById('sigCanvas');
+  const ctx         = canvas.getContext('2d');
+  const placeholder = document.getElementById('sigPlaceholder');
+  const sigWrapper  = document.getElementById('sigWrapper');
+
+  function resizeCanvas() {
+    const r = window.devicePixelRatio || 1;
+    const w = canvas.offsetWidth;
+    canvas.width = w*r; canvas.height = 180*r;
+    ctx.scale(r,r);
+    ctx.strokeStyle='#4f8ef7'; ctx.lineWidth=2.5; ctx.lineCap='round'; ctx.lineJoin='round';
+  }
+  window.addEventListener('load', resizeCanvas);
+  window.addEventListener('resize', () => { resizeCanvas(); if(!hasSig) placeholder.style.opacity='1'; });
+
+  let drawing=false, lastX=0, lastY=0;
+  function getPos(e) {
+    const rect=canvas.getBoundingClientRect(), src=e.touches?e.touches[0]:e;
+    return { x:src.clientX-rect.left, y:src.clientY-rect.top };
+  }
+  canvas.addEventListener('mousedown',  startDraw);
+  canvas.addEventListener('mousemove',  draw);
+  canvas.addEventListener('mouseup',    endDraw);
+  canvas.addEventListener('mouseleave', endDraw);
+  canvas.addEventListener('touchstart', startDraw, {passive:false});
+  canvas.addEventListener('touchmove',  draw,      {passive:false});
+  canvas.addEventListener('touchend',   endDraw);
+  function startDraw(e) { e.preventDefault(); drawing=true; sigWrapper.classList.add('drawing'); const p=getPos(e); lastX=p.x; lastY=p.y; placeholder.style.opacity='0'; }
+  function draw(e) {
+    if(!drawing) return; e.preventDefault();
+    const p=getPos(e);
+    ctx.beginPath(); ctx.moveTo(lastX,lastY); ctx.lineTo(p.x,p.y); ctx.stroke();
+    lastX=p.x; lastY=p.y; hasSig=true; updateSteps(); checkReady();
+  }
+  function endDraw() { drawing=false; sigWrapper.classList.remove('drawing'); }
+  function clearSignature() {
+    const r=window.devicePixelRatio||1;
+    ctx.clearRect(0,0,canvas.width/r,canvas.height/r);
+    hasSig=false; placeholder.style.opacity='1'; updateSteps(); checkReady();
+  }
+
+  /* =========================================================
+     SUBMIT / CANCEL
+  ========================================================= */
+  function checkReady() {
+    document.getElementById('submitBtn').disabled = !(photoID && petitions.length>0 && hasSig);
+  }
+  function cancelAll() {
+    if (!confirm('ยืนยันการยกเลิก?')) return;
+    retakeID();
+    petitions = []; renderPetitionGrid();
+    clearSignature();
+  }
+
+  async function submitForm() {
+    if (!photoID || petitions.length===0 || !hasSig) return;
+
+    openProgress();
+
+    try {
+      await delay(400); setProgStatus('id',       'spin');
+      await delay(500); setProgStatus('id',       'done'); setProgStatus('petition','spin');
+      await delay(400); setProgStatus('petition', 'done'); setProgStatus('sig',     'spin');
+      await delay(300); setProgStatus('sig',      'done'); setProgStatus('pdf',     'spin');
+
+      const payload = {
+        photo:     photoID,
+        petitions: petitions,
+        signature: canvas.toDataURL('image/png'),
+        timestamp: new Date().toISOString()
+      };
+
+      // ตรวจว่ารันบน GAS HTML Service หรือ standalone
+      if (typeof google !== 'undefined' && google.script) {
+        // ── รันบน GAS ── ใช้ google.script.run
+        google.script.run
+          .withSuccessHandler(function(result) {
+            if (result && result.success) {
+              setProgStatus('pdf', 'done');
+              setTimeout(finishProgress, 300);
+            } else {
+              closeProgress();
+              showToast('❌ ผิดพลาด: ' + ((result && result.error) || 'ไม่ทราบสาเหตุ'), 'error');
+            }
+          })
+          .withFailureHandler(function(err) {
+            closeProgress();
+            showToast('❌ เกิดข้อผิดพลาด: ' + err.message, 'error');
+          })
+          .processForm(payload);
+      } else {
+        // ── รันบน GitHub Pages / localhost ── ใช้ fetch
+        const res  = await fetch(APPS_SCRIPT_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain' },
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        if (data.success) {
+          setProgStatus('pdf', 'done');
+          await delay(300);
+          finishProgress();
+        } else {
+          throw new Error(data.error || 'ไม่ทราบสาเหตุ');
+        }
+      }
+    } catch(err) {
+      closeProgress();
+      showToast('❌ เกิดข้อผิดพลาด: ' + err.message, 'error');
+    }
+  }
+
+  /* ── PROGRESS MODAL HELPERS ── */
+  function openProgress() {
+    const m = document.getElementById('progressModal');
+    m.classList.remove('done');
+    m.classList.add('show');
+    document.getElementById('progTitle').textContent    = 'กำลังอัปโหลด...';
+    document.getElementById('progSubtitle').textContent = 'กรุณารอสักครู่';
+    document.getElementById('progBackBtn').style.display = 'none';
+    // reset all to wait
+    ['id','petition','sig','pdf'].forEach(k => setProgStatus(k, 'wait'));
+  }
+
+  function setProgStatus(key, state) {
+    const el = document.getElementById('ps-' + key);
+    const item = document.getElementById('pi-' + key);
+    if (!el) return;
+
+    if (state === 'wait') {
+      el.innerHTML = '<div class="prog-dot-wait"></div>';
+      item.classList.add('waiting');
+    } else if (state === 'spin') {
+      el.innerHTML = '<div class="prog-dot-spin"></div>';
+      item.classList.remove('waiting');
+    } else if (state === 'done') {
+      el.innerHTML = `<div class="prog-check">
+        <svg width="13" height="13" fill="none" stroke="white" stroke-width="3" viewBox="0 0 24 24">
+          <polyline points="20 6 9 17 4 12"/>
+        </svg>
+      </div>`;
+      item.classList.remove('waiting');
+    }
+  }
+
+  function finishProgress() {
+    const m = document.getElementById('progressModal');
+    m.classList.add('done');
+    document.getElementById('progTitle').textContent    = 'อัปโหลดเสร็จสิ้น!';
+    document.getElementById('progSubtitle').textContent = 'บันทึกใน Google Drive เรียบร้อยแล้ว';
+    document.getElementById('progBackBtn').style.display = 'block';
+  }
+
+  function closeProgress() {
+    document.getElementById('progressModal').classList.remove('show');
+  }
+
+  function resetForm() {
+    closeProgress();
+    retakeID();
+    petitions = []; renderPetitionGrid();
+    clearSignature();
+  }
+
+  function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+  function showLoading(t) { document.getElementById('loadingText').textContent=t; document.getElementById('loadingOverlay').classList.add('show'); }
+  function hideLoading()  { document.getElementById('loadingOverlay').classList.remove('show'); }
+  function showToast(msg, type) {
+    const t=document.getElementById('toast');
+    t.textContent=msg; t.className=type; t.style.display='block';
+    setTimeout(()=>{ t.style.display='none'; }, 4000);
+  }
+  document.addEventListener('keydown', e => {
+    if(e.key==='Escape') {
+      if(document.getElementById('cameraModal').classList.contains('show')) closeCamera();
+      else closeSheet();
+    }
+  });
+
+  // init
+  renderPetitionGrid();
+  updateSteps();
+</script>
+</body>
+</html>
