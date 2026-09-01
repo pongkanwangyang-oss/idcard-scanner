@@ -525,6 +525,9 @@
 
 <script>
   const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwNLAmEkI-ROUZADhqwHFVROuZs2wq3qlzJYjTspQ2Il8o0YcQHIDV7zoKYpjlyak7s/exec"; // ใส่ URL จาก Deploy ที่นี่
+
+  // อ่าน return URL จาก query string ?return=...
+  const RETURN_URL = new URLSearchParams(window.location.search).get('return') || null;
   const MAX_PETITION    = 4;
 
   // STATE
@@ -875,7 +878,10 @@
     m.classList.add('done');
     document.getElementById('progTitle').textContent    = 'อัปโหลดเสร็จสิ้น!';
     document.getElementById('progSubtitle').textContent = 'บันทึกใน Google Drive เรียบร้อยแล้ว';
-    document.getElementById('progBackBtn').style.display = 'block';
+
+    const btn = document.getElementById('progBackBtn');
+    btn.textContent  = RETURN_URL ? '← กลับไปยัง Google Form' : '← กลับไปยังหน้าคำร้อง';
+    btn.style.display = 'block';
   }
 
   function closeProgress() {
@@ -883,10 +889,16 @@
   }
 
   function resetForm() {
-    // ลองปิด tab ก่อน (ใช้ได้เมื่อ tab ถูกเปิดจาก JS)
+    // ถ้ามี return URL → redirect กลับไป Google Form
+    if (RETURN_URL) {
+      window.location.href = RETURN_URL;
+      return;
+    }
+
+    // ไม่มี return URL → ลองปิด tab
     window.close();
 
-    // ถ้าปิดไม่ได้ (เปิด URL เอง) → reset หน้าใหม่
+    // ถ้าปิดไม่ได้ → reset หน้าใหม่
     setTimeout(() => {
       closeProgress();
       retakeID();
