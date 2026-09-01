@@ -890,10 +890,16 @@
 
   function resetForm() {
     if (RETURN_URL) {
-      // ลองปิด tab นี้ก่อน (ถ้าเปิดมาจาก tab ใหม่ จะปิดแล้วกลับ tab เดิมที่ Form ค้างอยู่)
+      // พยายามปิด tab ก่อน (กรณีเปิด tab ใหม่)
       window.close();
-      // ถ้าปิดไม่ได้ (เปิด URL เอง) → redirect กลับ
-      setTimeout(() => { window.location.href = RETURN_URL; }, 300);
+      // ถ้าปิดไม่ได้ → ใช้ history.back() (ใช้ได้ดีใน LINE WebView)
+      setTimeout(() => {
+        if (history.length > 1) {
+          history.back();
+        } else {
+          window.location.href = RETURN_URL;
+        }
+      }, 300);
       return;
     }
     // ไม่มี return URL → reset หน้าใหม่
