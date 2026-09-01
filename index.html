@@ -889,16 +889,15 @@
   }
 
   function resetForm() {
-    // ถ้ามี return URL → redirect กลับไป Google Form
     if (RETURN_URL) {
-      window.location.href = RETURN_URL;
+      // ลองปิด tab นี้ก่อน (ถ้าเปิดมาจาก tab ใหม่ จะปิดแล้วกลับ tab เดิมที่ Form ค้างอยู่)
+      window.close();
+      // ถ้าปิดไม่ได้ (เปิด URL เอง) → redirect กลับ
+      setTimeout(() => { window.location.href = RETURN_URL; }, 300);
       return;
     }
-
-    // ไม่มี return URL → ลองปิด tab
+    // ไม่มี return URL → reset หน้าใหม่
     window.close();
-
-    // ถ้าปิดไม่ได้ → reset หน้าใหม่
     setTimeout(() => {
       closeProgress();
       retakeID();
