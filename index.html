@@ -883,10 +883,16 @@
   }
 
   function resetForm() {
-    closeProgress();
-    retakeID();
-    petitions = []; renderPetitionGrid();
-    clearSignature();
+    // ลองปิด tab ก่อน (ใช้ได้เมื่อ tab ถูกเปิดจาก JS)
+    window.close();
+
+    // ถ้าปิดไม่ได้ (เปิด URL เอง) → reset หน้าใหม่
+    setTimeout(() => {
+      closeProgress();
+      retakeID();
+      petitions = []; renderPetitionGrid();
+      clearSignature();
+    }, 300);
   }
 
   function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
